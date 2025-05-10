@@ -1,6 +1,7 @@
 package com.jobPrize.entity;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -14,6 +15,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -64,17 +66,24 @@ public class User {
     @Column(name="DELETED_DATE")
     private LocalDate deletedDate;
     
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Member member;
     
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Company company;
     
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Consultant consultant;
     
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Admin admin;
+    
+    @OneToMany(mappedBy = "user")
+    private List<Payment> payments;
+    
+    @OneToMany(mappedBy = "user")
+    private List<Chat> chats;
+    
     
 
 	public void updatePassword(String password) {
@@ -97,7 +106,7 @@ public class User {
 		this.isSubscribed = true;
 	}
 
-	public void unsubscribe() {
+	public void unSubscribe() {
 		this.isSubscribed = false;
 	}
 

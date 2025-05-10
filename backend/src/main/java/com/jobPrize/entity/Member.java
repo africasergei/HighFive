@@ -2,6 +2,8 @@ package com.jobPrize.entity;
 
 import java.util.List;
 
+import org.hibernate.annotations.BatchSize;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -43,8 +45,17 @@ public class Member {
 	@OneToMany(mappedBy = "member")
 	private List<CareerDescription> careerDescriptions;
 	
+	@BatchSize(size = 10)
 	@OneToMany(mappedBy = "member")
 	private List<Application> applications;
+	
+	@BatchSize(size = 10)
+	@OneToMany(mappedBy = "member")
+	private List<Proposal> proposals;
+	
+	@BatchSize(size = 10)
+	@OneToMany(mappedBy = "member")
+	private List<RequestDocument> requestDocuments;
 //	
 //	@OneToMany(mappedBy = "member")
 //	private List<Interest> interests;
@@ -52,8 +63,7 @@ public class Member {
 //	@OneToMany(mappedBy = "member")
 //	private List<Similarity> similarities;
 //	
-//	@OneToMany(mappedBy = "member")
-//	private List<Proposal> proposals;
+
 	
 
     public void updateNickname(String nickname) {
