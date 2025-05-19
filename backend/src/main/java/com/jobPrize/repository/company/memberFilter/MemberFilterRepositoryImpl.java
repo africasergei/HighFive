@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
-import com.jobPrize.companyService.dto.MemberFilterCondition;
+import com.jobPrize.companyService.dto.memberPool.MemberFilterCondition;
 import com.jobPrize.entity.member.Member;
 import com.jobPrize.entity.member.QMember;
 import com.querydsl.core.BooleanBuilder;
