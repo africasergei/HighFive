@@ -7,11 +7,10 @@ import lombok.Getter;
 @Getter
 @Builder
 public class MemberFilterCondition {
-    
-    // 필터 조건
-    private final boolean hasCareer;       
-    private final EducationLevel education;
-    private final String address;      
-    private final String job;           
-    
+
+	private final boolean hasCareer;
+	private final EducationLevel education;
+	private final String address;
+	private final String job;
+
 }
