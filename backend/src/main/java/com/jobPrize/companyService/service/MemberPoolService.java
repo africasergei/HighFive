@@ -1,11 +1,12 @@
 package com.jobPrize.companyService.service;
 
 import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import com.jobPrize.companyService.dto.MemberPoolDto;
 import com.jobPrize.companyService.dto.memberPool.MemberDetailResponseDto;
 import com.jobPrize.companyService.dto.memberPool.MemberPoolListResponseDto;
 import com.jobPrize.entity.common.User;
@@ -14,16 +15,21 @@ import com.jobPrize.entity.company.Company;
 import com.jobPrize.entity.company.JobPosting;
 import com.jobPrize.entity.memToCom.Interest;
 import com.jobPrize.entity.memToCom.Similarity;
+import com.jobPrize.entity.member.Career;
+import com.jobPrize.entity.member.Certification;
 import com.jobPrize.entity.member.Education;
+import com.jobPrize.entity.member.LanguageTest;
 import com.jobPrize.entity.member.Member;
-import com.jobPrize.entity.memToCom.Interest;
 import com.jobPrize.jwt.TokenProvider;
 import com.jobPrize.repository.common.UserRepository;
 import com.jobPrize.repository.common.subscription.SubscriptionRepository;
 import com.jobPrize.repository.company.jobPosting.CompanyJobPostingRepository;
 import com.jobPrize.repository.memToCom.interest.InterestRepository;
 import com.jobPrize.repository.memToCom.similarity.SimilarityRepository;
+import com.jobPrize.repository.member.career.CareerRepository;
+import com.jobPrize.repository.member.certification.CertificationRepository;
 import com.jobPrize.repository.member.education.EducationRepository;
+import com.jobPrize.repository.member.languageTest.LanguageTestRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,7 +43,12 @@ public class MemberPoolService {
     private final EducationRepository educationRepository;
     private final CompanyJobPostingRepository companyJobPostingRepository;
     private final InterestRepository interestRepository;
-
+    private final CertificationRepository certificationRepository;
+    private final LanguageTestRepository languageTestRepository;
+    private final CareerRepository careerRepository;
+    
+    
+    
     // ✅ 기업이 인재 검색 (리스트 조회)
     public Page<MemberPoolListResponseDto> getMemberInfo(String token, Pageable pageable) throws IllegalAccessException {
         if (!hasAccessToMemberPool(token)) {
@@ -70,11 +81,20 @@ public class MemberPoolService {
         }
 
         Member member = findValidMemberById(memberId);
-        List<Education> educations = educationRepository.findAllByMemberId(memberId);
+        List<Certification> certifications = certificationRepository.findAllByMemberId(memberId);
+        List<LanguageTest> languageTests = languageTestRepository.findAllByMemberId(memberId);
+
+        // ✅ 최신 학력 및 경력 조회
+        Education latestEducation = educationRepository.findTopByMemberIdOrderByGraduationDateDesc(memberId)
+                .orElse(null);
+        Career latestCareer = careerRepository.findTopByMemberIdOrderByStartDateDesc(memberId)
+                .orElse(null);
+
         boolean isInterested = interestRepository.existsByCompanyIdAndMemberId(getCompanyIdFromToken(token), memberId);
 
-        return mapToDetailDto(member, educations, isInterested);
+        return mapToDetailDto(member, latestEducation, latestCareer, certifications, languageTests, isInterested);
     }
+
 
     // ✅ 기업이 특정 인재를 관심 등록
     public void registerInterest(String token, Long memberId) {
@@ -161,7 +181,13 @@ public class MemberPoolService {
                 .build();
     }
 
-    private MemberDetailResponseDto mapToDetailDto(Member member, List<Education> educations, boolean isInterested) {
+    private MemberDetailResponseDto mapToDetailDto(Member member, 
+            Education latestEducation, 
+            Career latestCareer, 
+            List<Certification> certifications, 
+            List<LanguageTest> languageTests, 
+            boolean isInterested) {
+        
         return MemberDetailResponseDto.builder()
                 .id(member.getUser().getId())
                 .name(member.getUser().getName())
@@ -169,13 +195,14 @@ public class MemberPoolService {
                 .gender(member.getUser().getGenderType())
                 .age(member.getUser().getAge())
                 .phone(member.getUser().getPhone())
-                .hasCareer(!member.getCareers().isEmpty())
-                .job(member.getCareers().isEmpty() ? null : member.getCareers().get(0).getJob())
-                .educationResponseDto(educations.isEmpty() ? null : EducationResponseDto.fromEntity(educations.get(0)))
-                .careerResponseDto(null)
-                .certificationResponseDto(null)
-                .languageTestResponseDto(null)
+                .hasCareer(latestCareer != null) // 최신 경력 존재 여부
+                .job(latestCareer != null ? latestCareer.getJob() : null) // 최신 경력의 직무
+                .educationResponseDto(latestEducation != null ? EducationResponseDto.fromEntity(latestEducation) : null)
+                .careerResponseDto(latestCareer != null ? CareerResponseDto.fromEntity(latestCareer) : null)
+                .certificationResponseDto(certifications)
+                .languageTestResponseDto(languageTests)
                 .isInterested(isInterested)
                 .build();
     }
+
 }
