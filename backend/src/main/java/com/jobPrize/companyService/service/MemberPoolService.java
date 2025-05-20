@@ -1,22 +1,27 @@
 package com.jobPrize.companyService.service;
 
 import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.jobPrize.companyService.dto.MemberPoolDto;
+import com.jobPrize.companyService.dto.memberPool.MemberDetailResponseDto;
+import com.jobPrize.companyService.dto.memberPool.MemberPoolListResponseDto;
 import com.jobPrize.entity.common.User;
 import com.jobPrize.entity.common.UserType;
+import com.jobPrize.entity.company.Company;
 import com.jobPrize.entity.company.JobPosting;
+import com.jobPrize.entity.memToCom.Interest;
 import com.jobPrize.entity.memToCom.Similarity;
 import com.jobPrize.entity.member.Education;
 import com.jobPrize.entity.member.Member;
+import com.jobPrize.entity.memToCom.Interest;
 import com.jobPrize.jwt.TokenProvider;
 import com.jobPrize.repository.common.UserRepository;
 import com.jobPrize.repository.common.subscription.SubscriptionRepository;
 import com.jobPrize.repository.company.jobPosting.CompanyJobPostingRepository;
+import com.jobPrize.repository.memToCom.interest.InterestRepository;
 import com.jobPrize.repository.memToCom.similarity.SimilarityRepository;
 import com.jobPrize.repository.member.education.EducationRepository;
 
@@ -31,8 +36,84 @@ public class MemberPoolService {
     private final SimilarityRepository similarityRepository;
     private final EducationRepository educationRepository;
     private final CompanyJobPostingRepository companyJobPostingRepository;
+    private final InterestRepository interestRepository;
 
-    public boolean hasAccessToTalentPool(String token) {
+    // ✅ 기업이 인재 검색 (리스트 조회)
+    public Page<MemberPoolListResponseDto> getMemberInfo(String token, Pageable pageable) throws IllegalAccessException {
+        if (!hasAccessToMemberPool(token)) {
+            throw new IllegalAccessException("구독을 하지 않은 사용자는 접근할 수 없습니다.");
+        }
+
+        Long userId = getUserIdFromToken(token);
+        User user = findValidUserById(userId);
+        if (user == null || user.getCompany() == null) {
+            throw new IllegalStateException("사용자 정보를 찾을 수 없습니다.");
+        }
+
+        JobPosting latestJobPosting = companyJobPostingRepository.findLatestJobPosting(user.getCompany().getId())
+                .orElseThrow(() -> new IllegalStateException("최근 채용공고를 찾을 수 없습니다."));
+
+        Page<Similarity> similaritiesPage = similarityRepository.findAllWithMemberByJobPostingId(latestJobPosting.getId(), pageable);
+
+        return similaritiesPage.map(similarity -> {
+            Member member = similarity.getMember();
+            List<Education> educations = educationRepository.findAllByMemberId(member.getId());
+            boolean isInterested = interestRepository.existsByCompanyIdAndMemberId(user.getCompany().getId(), member.getId());
+            return mapToDto(member, educations, similarity, isInterested);
+        });
+    }
+
+    // ✅ 기업이 특정 인재 상세 조회
+    public MemberDetailResponseDto getMemberDetail(String token, Long memberId) throws IllegalAccessException {
+        if (!hasAccessToMemberPool(token)) {
+            throw new IllegalAccessException("구독을 하지 않은 사용자는 접근할 수 없습니다.");
+        }
+
+        Member member = findValidMemberById(memberId);
+        List<Education> educations = educationRepository.findAllByMemberId(memberId);
+        boolean isInterested = interestRepository.existsByCompanyIdAndMemberId(getCompanyIdFromToken(token), memberId);
+
+        return mapToDetailDto(member, educations, isInterested);
+    }
+
+    // ✅ 기업이 특정 인재를 관심 등록
+    public void registerInterest(String token, Long memberId) {
+        Long companyId = getCompanyIdFromToken(token);
+        Member member = findValidMemberById(memberId);
+
+        Interest interest = Interest.builder()
+                .company(Company.builder().id(companyId).build())
+                .member(member)
+                .build();
+
+        interestRepository.save(interest);
+    }
+
+    // ✅ 기업이 관심 등록한 인재 조회
+    public Page<MemberPoolListResponseDto> getInterestedMembers(String token, Pageable pageable) {
+        Long companyId = getCompanyIdFromToken(token);
+
+        Page<Interest> interestedMembers = interestRepository.findByCompanyId(companyId, pageable);
+
+        return interestedMembers.map(interest -> {
+            Member member = interest.getMember();
+            List<Education> educations = educationRepository.findAllByMemberId(member.getId());
+            return mapToDto(member, educations, null, true);
+        });
+    }
+
+    // ✅ 관심 등록을 취소
+    public void removeInterest(String token, Long memberId) {
+        Long companyId = getCompanyIdFromToken(token);
+
+        Interest interest = interestRepository.findByCompanyIdAndMemberId(companyId, memberId)
+                .orElseThrow(() -> new IllegalStateException("관심 등록되지 않은 인재입니다."));
+
+        interestRepository.delete(interest);
+    }
+
+    // 🔹 인증 및 검증 로직
+    private boolean hasAccessToMemberPool(String token) {
         Long userId = getUserIdFromToken(token);
         UserType userType = tokenProvider.getUserTypeFromToken(token);
 
@@ -44,41 +125,13 @@ public class MemberPoolService {
         return user != null && subscriptionRepository.existsByUserId(user.getId());
     }
 
-    public Page<MemberPoolDto> getMemberInfo(String token, Pageable pageable) throws IllegalAccessException {
-        Long userId = getUserIdFromToken(token);
-        UserType userType = tokenProvider.getUserTypeFromToken(token);
-
-        if (!isCompanyUser(userType)) {
-            throw new IllegalAccessException("접근 권한이 없습니다.");
-        }
-       
-        if (!hasAccessToTalentPool(token)) {
-            throw new IllegalAccessException("구독을 하지 않은 사용자는 접근할 수 없습니다.");
-        }
-
-        User user = findValidUserById(userId);
-        if (user == null) {
-            throw new IllegalStateException("사용자를 찾을 수 없습니다.");
-        }
-        if (user.getCompany() == null) {
-            throw new IllegalStateException("사용자가 소속된 기업 정보를 찾을 수 없습니다.");
-        }
-
-        Long companyId = user.getCompany().getId();
-        JobPosting latestJobPosting = companyJobPostingRepository.findLatestJobPosting(companyId)
-                .orElseThrow(() -> new IllegalStateException("최근 채용공고를 찾을 수 없습니다."));
-
-        Page<Similarity> similaritiesPage = similarityRepository.findAllWithMemberByJobPostingId(latestJobPosting.getId(), pageable);
-
-        return similaritiesPage.map(similarity -> {
-            Member member = similarity.getMember();
-            List<Education> educations = educationRepository.findAllByMemberId(member.getId());
-            return mapToDto(member, educations, similarity);
-        });
-    }
-
     private Long getUserIdFromToken(String token) {
         return Long.parseLong(tokenProvider.getIdFromToken(token));
+    }
+
+    private Long getCompanyIdFromToken(String token) {
+        User user = findValidUserById(getUserIdFromToken(token));
+        return user.getCompany().getId();
     }
 
     private boolean isCompanyUser(UserType userType) {
@@ -89,14 +142,40 @@ public class MemberPoolService {
         return userRepository.findByIdAndDeletedDateIsNull(userId).orElse(null);
     }
 
-    private MemberPoolDto mapToDto(Member member, List<Education> educations, Similarity similarity) {
-        return MemberPoolDto.builder()
+    private Member findValidMemberById(Long memberId) {
+        return userRepository.findByIdAndDeletedDateIsNull(memberId)
+                .map(User::getMember)
+                .orElseThrow(() -> new IllegalStateException("해당 회원을 찾을 수 없습니다."));
+    }
+
+    // 🔹 DTO 변환 로직
+    private MemberPoolListResponseDto mapToDto(Member member, List<Education> educations, Similarity similarity, boolean isInterested) {
+        return MemberPoolListResponseDto.builder()
                 .memberId(member.getUser().getId())
                 .name(member.getUser().getName())
-                .job(member.getCareers().isEmpty() ? null : member.getCareers().get(0).getJob()) 
+                .job(member.getCareers().isEmpty() ? null : member.getCareers().get(0).getJob())
                 .hasCareer(!member.getCareers().isEmpty())
-                .educationLevel(educations != null && !educations.isEmpty() ? educations.get(0).getEducationLevel() : null) // ✅ `name()` 제거 및 널 체크 적용
-                .score(similarity != null ? similarity.getScore() : 0) 
+                .educationLevel(educations.isEmpty() ? null : educations.get(0).getEducationLevel())
+                .score(similarity != null ? similarity.getScore() : 0)
+                .isInterested(isInterested)
+                .build();
+    }
+
+    private MemberDetailResponseDto mapToDetailDto(Member member, List<Education> educations, boolean isInterested) {
+        return MemberDetailResponseDto.builder()
+                .id(member.getUser().getId())
+                .name(member.getUser().getName())
+                .email(member.getUser().getEmail())
+                .gender(member.getUser().getGenderType())
+                .age(member.getUser().getAge())
+                .phone(member.getUser().getPhone())
+                .hasCareer(!member.getCareers().isEmpty())
+                .job(member.getCareers().isEmpty() ? null : member.getCareers().get(0).getJob())
+                .educationResponseDto(educations.isEmpty() ? null : EducationResponseDto.fromEntity(educations.get(0)))
+                .careerResponseDto(null)
+                .certificationResponseDto(null)
+                .languageTestResponseDto(null)
+                .isInterested(isInterested)
                 .build();
     }
 }
