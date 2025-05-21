@@ -2,7 +2,7 @@ package com.jobPrize.companyService.dto.jobPosting;
 
 import java.util.List;
 
-
+import com.jobPrize.companyService.dto.jobPostingImage.JobPostingImageDto;
 import com.jobPrize.entity.company.CompanyType;
 import com.jobPrize.entity.memToCom.EducationLevel;
 
@@ -24,9 +24,6 @@ public class JobPostingUpdateDto {
     @NotBlank(message = "공고명을 입력해주세요.")
     @Size(max = 50, message = "공고명은 최대 50자까지 입력 가능합니다.")
     private String title;
-
-    @NotNull(message = "기업 형태를 선택해주세요.")
-    private CompanyType companyType;
 
     @NotBlank(message = "근무 시간을 입력해주세요.")
     @Size(max = 20, message = "근무 시간은 최대 20자까지 입력 가능합니다.")
@@ -61,4 +58,5 @@ public class JobPostingUpdateDto {
     
     @Size(max = 5, message = "최대 5개의 이미지만 업로드 가능합니다.")
     private List <String> imageUrls;
+    
 }

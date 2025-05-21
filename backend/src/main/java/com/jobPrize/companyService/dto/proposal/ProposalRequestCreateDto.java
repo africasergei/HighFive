@@ -1,5 +1,7 @@
 package com.jobPrize.companyService.dto.proposal;
 
+import com.jobPrize.entity.memToCom.Proposal;
+
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
@@ -31,5 +33,6 @@ public class ProposalRequestCreateDto {
 	@Min(value = 0, message = "급여는 0 이상이어야 합니다.")
 	@Max(value = 100000000, message = "급여는 너무 클 수 없습니다.")
 	private int proposalSalary;
-
+	
+	
 }

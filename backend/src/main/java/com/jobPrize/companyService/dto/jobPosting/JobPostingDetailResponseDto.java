@@ -2,6 +2,7 @@ package com.jobPrize.companyService.dto.jobPosting;
 
 import java.util.List;
 
+import com.jobPrize.companyService.dto.jobPostingImage.JobPostingImageDto;
 import com.jobPrize.entity.company.CompanyType;
 import com.jobPrize.entity.memToCom.EducationLevel;
 
@@ -25,6 +26,6 @@ private EducationLevel educationLevel;
 private final int salary;
 private final String content;
 private final String requirement;
-private final List<String> imageurls;
+private final List<String> imageUrls;
 
 }

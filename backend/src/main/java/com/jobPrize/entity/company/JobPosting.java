@@ -11,6 +11,7 @@ import com.jobPrize.entity.memToCom.Application;
 import com.jobPrize.entity.memToCom.EducationLevel;
 import com.jobPrize.entity.memToCom.Similarity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -79,8 +80,12 @@ public class JobPosting {
 
 	@Column(name = "expired_date", nullable = false)
 	private LocalDate expiredDate;
+	
+	@Enumerated(EnumType.STRING) 
+    @Column(name = "company_type", nullable = false)
+    private CompanyType companyType; 
 
-	@OneToMany(mappedBy = "jobPosting")
+	@OneToMany(mappedBy = "jobPosting",cascade = CascadeType.ALL)
 	private List<JobPostingImage> jobPostingImages = new ArrayList<>();
 
 	@OneToMany(mappedBy = "jobPosting")
@@ -100,6 +105,8 @@ public class JobPosting {
 		this.educationLevel = educationLevel;
 		this.salary = salary;
 		this.requirement = requirement;
+		this.companyType = companyType;
 	}
-	
+
+
 }
