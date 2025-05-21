@@ -1,5 +1,7 @@
 package com.jobPrize.companyService.service;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -7,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.jobPrize.companyService.dto.application.ApplicationListResponseDto;
 import com.jobPrize.entity.memToCom.Application;
+import com.jobPrize.entity.member.Education;
 import com.jobPrize.entity.member.Member;
 import com.jobPrize.repository.memToCom.application.ApplicationRepository;
 
@@ -28,18 +31,18 @@ public class ApplicationService {
     }
 
     private ApplicationListResponseDto convertToDto(Application application) {
-        Member member = application.getMember(); // ✅ 지원자 정보 가져오기
-
+        Member member = application.getMember(); 
+        List<Education> educations = member.getEducations();
         return ApplicationListResponseDto.builder()
                 .memberId(member.getId())
-                .jobPostingId(application.getJobPosting().getId()) // ✅ 채용 공고 ID
-                .companyId(application.getJobPosting().getCompany().getId()) // ✅ 회사 ID
+                .jobPostingId(application.getJobPosting().getId()) 
+                .companyId(application.getJobPosting().getCompany().getId()) 
                 .name(member.getUser().getName()) // ✅ 지원자 이름
                 .gender(member.getUser().getGenderType()) // ✅ 성별
-                .age(member.getUser().getAge()) // ✅ 나이
+                .age(member.getUser().getBirthDate()) // ✅ 나이
                 .hasCareer(!member.getCareers().isEmpty()) // ✅ 경력 여부
-                .job(application.getJobTitle()) // ✅ 지원 직무
-                .educationLevel(member.getEducationLevel()) // ✅ 학력 정보
+                .job(application.getJobPosting().getJob())
+                .educationLevel(educations.isEmpty() ? null : educations.get(0).getEducationLevel())
                 .createdDate(application.getCreatedDate()) // ✅ 지원한 날짜
                 .isInterested(application.isInterested()) // ✅ 관심 여부
                 .build();

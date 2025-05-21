@@ -12,7 +12,7 @@ import com.jobPrize.entity.common.User;
 import com.jobPrize.entity.company.Company;
 import com.jobPrize.entity.company.JobPosting;
 import com.jobPrize.jwt.TokenProvider;
-import com.jobPrize.repository.common.UserRepository;
+import com.jobPrize.repository.common.user.UserRepository;
 import com.jobPrize.repository.company.jobPosting.CompanyJobPostingRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class JobPostingService {
     private final UserRepository userRepository;
     private final TokenProvider tokenProvider;
 
-    @Transactional //생성
+    @Transactional // ✅ 채용공고 생성
     public JobPosting createJobPosting(String token, JobPostingCreateDto dto) {
         Long userId = getUserIdFromToken(token);
         User user = userRepository.findById(userId)
@@ -57,7 +57,7 @@ public class JobPostingService {
         return saved;
     }
 
-    @Transactional(readOnly = true)	//상세보기
+    @Transactional(readOnly = true) // ✅ 채용공고 상세 조회
     public JobPostingDetailResponseDto readJobPostingDetail(Long jobPostingId) {
         JobPosting jobPosting = companyJobPostingRepository.findWithJobPostingImageByJobPostingId(jobPostingId)
                 .orElseThrow(() -> new IllegalStateException("해당 채용공고를 찾을 수 없습니다."));
@@ -81,8 +81,10 @@ public class JobPostingService {
                 .build();
     }
 
-    @Transactional	//삭제
-    public void deleteJobPosting(Long companyId, Long jobPostingId) {
+    @Transactional // ✅ 채용공고 삭제
+    public void deleteJobPosting(String token, Long jobPostingId) {
+        Long companyId = getCompanyIdFromToken(token);
+
         JobPosting jobPosting = companyJobPostingRepository.findWithJobPostingImageByJobPostingId(jobPostingId)
                 .orElseThrow(() -> new IllegalStateException("해당 채용공고를 찾을 수 없거나, 삭제 권한이 없습니다."));
 
@@ -96,8 +98,10 @@ public class JobPostingService {
         companyJobPostingRepository.delete(jobPosting);
     }
 
-    @Transactional	//수정
-    public JobPosting updateJobPosting(Long companyId, JobPostingUpdateDto dto) {
+    @Transactional // ✅ 채용공고 수정
+    public JobPosting updateJobPosting(String token, JobPostingUpdateDto dto) {
+        Long companyId = getCompanyIdFromToken(token);
+
         JobPosting jobPosting = companyJobPostingRepository.findWithJobPostingImageByJobPostingId(dto.getJobpostingId())
                 .orElseThrow(() -> new IllegalStateException("해당 채용공고를 찾을 수 없거나, 수정 권한이 없습니다."));
 
@@ -117,14 +121,26 @@ public class JobPostingService {
                 dto.getRequirement()
         );
 
-        // ✅ 삭제할 이미지 URL 계산 후 반영
         List<String> toDelete = jobPostingImageService.getImageUrlsToDelete(dto.getJobpostingId(), dto.getImageUrls());
         jobPostingImageService.updateSpecificImages(dto.getJobpostingId(), toDelete, dto.getImageUrls());
 
         return companyJobPostingRepository.save(jobPosting);
     }
 
+    // 🔹 안정적인 사용자 ID 가져오기
     private Long getUserIdFromToken(String token) {
-        return Long.parseLong(tokenProvider.getIdFromToken(token));
+        try {
+            return tokenProvider.getIdFromToken(token);
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException("토큰에서 유효한 사용자 ID를 찾을 수 없습니다.", e);
+        }
+    }
+
+    // 🔹 안정적인 기업 ID 가져오기
+    private Long getCompanyIdFromToken(String token) {
+        Long userId = getUserIdFromToken(token);
+        return userRepository.findById(userId)
+                .map(user -> user.getCompany().getId())
+                .orElseThrow(() -> new IllegalStateException("사용자의 기업 정보를 찾을 수 없습니다."));
     }
 }

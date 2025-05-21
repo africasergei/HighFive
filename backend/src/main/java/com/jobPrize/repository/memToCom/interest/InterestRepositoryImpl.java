@@ -19,13 +19,14 @@ public class InterestRepositoryImpl implements InterestRepositoryCustom {
 	private final JPAQueryFactory queryFactory;
 
 	@Override
-	public Page<Interest> findAllByCompanyId(Long id, Pageable pageable) {
+	public Page<Interest> findAllByCompanyId(Long id, Pageable pageable, boolean isMemberInterest ) {
 		QInterest interest = QInterest.interest;
 		
 		List<Interest> results = queryFactory
 				.selectFrom(interest)
 				.join(interest.company).fetchJoin()
-				.where(interest.company.id.eq(id))
+				.where(interest.company.id.eq(id)
+				        .and(isMemberInterest ? interest.member.isNotNull() : interest.application.isNotNull())) 
 				.offset(pageable.getOffset())
 				.limit(pageable.getPageSize())
 				.fetch();

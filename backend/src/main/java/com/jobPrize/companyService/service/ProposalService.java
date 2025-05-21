@@ -1,6 +1,5 @@
 package com.jobPrize.companyService.service;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -14,7 +13,7 @@ import com.jobPrize.entity.memToCom.Proposal;
 import com.jobPrize.entity.member.Education;
 import com.jobPrize.entity.member.Member;
 import com.jobPrize.jwt.TokenProvider;
-import com.jobPrize.repository.common.UserRepository;
+import com.jobPrize.repository.common.user.UserRepository;
 import com.jobPrize.repository.memToCom.proposal.ProposalRepository;
 import com.jobPrize.repository.member.member.MemberRepository;
 
@@ -29,10 +28,10 @@ public class ProposalService {
     private final TokenProvider tokenProvider;
     private final MemberRepository memberRepository;
 
-    @Transactional
+    @Transactional // ✅ 제안 생성
     public Proposal createProposal(String token, ProposalRequestCreateDto dto) {
-        Long userId = getUserIdFromToken(token); 
-        
+        Long userId = getUserIdFromToken(token);
+
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("사용자 정보를 찾을 수 없습니다."));
 
@@ -48,32 +47,46 @@ public class ProposalService {
         return proposalRepository.save(proposal);
     }
 
-    @Transactional(readOnly = true)
-    public Page<ProposalResponseListDto> readProposalsByCompanyId(Long companyId, Pageable pageable) {
+    @Transactional(readOnly = true) // ✅ 기업 기준 제안 목록 조회
+    public Page<ProposalResponseListDto> readProposalsByCompanyId(String token, Pageable pageable) {
+        Long companyId = getCompanyIdFromToken(token);
         Page<Proposal> proposalPage = proposalRepository.findAllByCompanyId(companyId, pageable);
-        
+
         return proposalPage.map(this::convertToDto);
     }
 
+    // 🔹 DTO 변환 로직
     private ProposalResponseListDto convertToDto(Proposal proposal) {
-        Member member = proposal.getMember(); // ✅ member 직접 가져오기
-        List<Education> educations = member.getEducations(); // ✅ educations 리스트 가져오기
+        Member member = proposal.getMember();
+        List<Education> educations = member.getEducations();
 
         return ProposalResponseListDto.builder()
-        		.id(proposal.getId())
-                .name(member.getUser().getName()) // ✅ null 처리 제거
+                .id(proposal.getId())
+                .name(member.getUser().getName()) 
                 .gender(member.getUser().getGenderType()) // ✅ null 처리 제거
-                .age(member.getUser().getAge()) // ✅ 기본값 설정 필요 없음
+                .age(member.getUser().getBirthDate()) // ✅ 기본값 설정 필요 없음
                 .hasCareer(!member.getCareers().isEmpty())
                 .job(proposal.getProposalJob())
-                .educationLevel(educations.get(0).getEducationLevel()) // ✅ 항상 존재한다고 가정
+                .educationLevel(!educations.isEmpty() ? educations.get(0).getEducationLevel() : null) // ✅ 빈 리스트 예외 처리
                 .proposalDate(proposal.getProposalDate())
                 .proposalStatus(proposal.getProposalStatus())
                 .build();
     }
 
-    
+    // 🔹 안정적인 사용자 ID 가져오기
     private Long getUserIdFromToken(String token) {
-        return Long.parseLong(tokenProvider.getIdFromToken(token));
+        try {
+            return tokenProvider.getIdFromToken(token);
+        } catch (IllegalStateException e) {
+            throw new IllegalStateException("토큰에서 유효한 사용자 ID를 찾을 수 없습니다.", e);
+        }
+    }
+
+    // 🔹 안정적인 기업 ID 가져오기
+    private Long getCompanyIdFromToken(String token) {
+        Long userId = getUserIdFromToken(token);
+        return userRepository.findById(userId)
+                .map(user -> user.getCompany().getId())
+                .orElseThrow(() -> new IllegalStateException("사용자의 기업 정보를 찾을 수 없습니다."));
     }
 }
