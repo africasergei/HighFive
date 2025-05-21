@@ -24,7 +24,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
+@Getter
 @Entity
 @Table(name = "proposal")
 @NoArgsConstructor
@@ -49,6 +49,9 @@ public class Proposal {
 
 	@Column(name = "proposal_title", nullable = false)
 	private String proposalTitle;
+	
+	@Column(name = "proposal_campanyName",nullable = false)
+	private String companyName;
 
 	@Column(name = "proposal_content", nullable = false)
 	private String proposalContent;
@@ -72,4 +75,8 @@ public class Proposal {
 	public void changeStatus(ProposalStatus status) {
 		this.proposalStatus = status;
 	}
+
+
+
+	
 }
