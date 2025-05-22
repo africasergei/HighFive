@@ -1,7 +1,6 @@
-package com.jobPrize.companyService.service;
+package com.jobPrize.companyService.service.integrated;
 
 import java.util.List;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,7 +13,6 @@ import com.jobPrize.companyService.dto.jobPosting.JobPostingUpdateDto;
 import com.jobPrize.entity.common.User;
 import com.jobPrize.entity.company.Company;
 import com.jobPrize.entity.company.JobPosting;
-import com.jobPrize.jwt.TokenProvider;
 import com.jobPrize.repository.common.user.UserRepository;
 import com.jobPrize.repository.company.jobPosting.CompanyJobPostingRepository;
 
@@ -27,10 +25,10 @@ public class JobPostingService {
     private final CompanyJobPostingRepository companyJobPostingRepository;
     private final JobPostingImageService jobPostingImageService;
     private final UserRepository userRepository;
-    private final TokenProvider tokenProvider;
-    @Transactional // ✅ 채용공고 생성
-    public JobPosting createJobPosting(String token, JobPostingCreateDto dto) {
-        Long userId = getUserIdFromToken(token);
+
+    // ✅ 채용공고 생성 (토큰 제거 후 `userId` 직접 받기)
+    @Transactional
+    public JobPosting createJobPosting(Long userId, JobPostingCreateDto dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("사용자 정보를 찾을 수 없습니다."));
 
@@ -53,13 +51,13 @@ public class JobPostingService {
                 .build();
 
         JobPosting saved = companyJobPostingRepository.save(jobPosting);
-
         jobPostingImageService.updateSpecificImages(saved.getId(), List.of(), dto.getImageUrls());
 
         return saved;
     }
 
-    @Transactional(readOnly = true) // ✅ 채용공고 상세 조회
+    // ✅ 채용공고 상세 조회
+    @Transactional(readOnly = true)
     public JobPostingDetailResponseDto readJobPostingDetail(Long jobPostingId) {
         JobPosting jobPosting = companyJobPostingRepository.findWithJobPostingImageByJobPostingId(jobPostingId)
                 .orElseThrow(() -> new IllegalStateException("해당 채용공고를 찾을 수 없습니다."));
@@ -83,10 +81,9 @@ public class JobPostingService {
                 .build();
     }
 
-    @Transactional // ✅ 채용공고 삭제
-    public void deleteJobPosting(String token, Long jobPostingId) {
-        Long companyId = getCompanyIdFromToken(token);
-
+    // ✅ 채용공고 삭제 (토큰 제거 후 `companyId` 직접 받기)
+    @Transactional
+    public void deleteJobPosting(Long companyId, Long jobPostingId) {
         JobPosting jobPosting = companyJobPostingRepository.findWithJobPostingImageByJobPostingId(jobPostingId)
                 .orElseThrow(() -> new IllegalStateException("해당 채용공고를 찾을 수 없거나, 삭제 권한이 없습니다."));
 
@@ -100,10 +97,9 @@ public class JobPostingService {
         companyJobPostingRepository.delete(jobPosting);
     }
 
-    @Transactional // ✅ 채용공고 수정
-    public JobPosting updateJobPosting(String token, JobPostingUpdateDto dto) {
-        Long companyId = getCompanyIdFromToken(token);
-
+    // ✅ 채용공고 수정 (토큰 제거 후 `companyId` 직접 받기)
+    @Transactional
+    public JobPosting updateJobPosting(Long companyId, JobPostingUpdateDto dto) {
         JobPosting jobPosting = companyJobPostingRepository.findWithJobPostingImageByJobPostingId(dto.getJobpostingId())
                 .orElseThrow(() -> new IllegalStateException("해당 채용공고를 찾을 수 없거나, 수정 권한이 없습니다."));
 
@@ -128,12 +124,11 @@ public class JobPostingService {
 
         return companyJobPostingRepository.save(jobPosting);
     }
+
+    // ✅ 기업 기준 채용공고 목록 조회 (토큰 제거 후 `companyId` 직접 받기)
     @Transactional(readOnly = true)
-    public Page<JobPostingListResponseDto> getMyJobPostings(String token, Pageable pageable) {
-        Long companyId = getCompanyIdFromToken(token);
-
+    public Page<JobPostingListResponseDto> getMyJobPostings(Long companyId, Pageable pageable) {
         Page<JobPosting> jobPostings = companyJobPostingRepository.findAllByCompanyId(companyId, pageable);
-
         return jobPostings.map(this::convertToDto);
     }
 
@@ -148,21 +143,5 @@ public class JobPostingService {
                 .educationLevel(jobPosting.getEducationLevel())
                 .createdDate(jobPosting.getCreatedDate())
                 .build();
-    }
-
-    private Long getUserIdFromToken(String token) {
-        try {
-            return tokenProvider.getIdFromToken(token);
-        } catch (IllegalStateException e) {
-            throw new IllegalStateException("토큰에서 유효한 사용자 ID를 찾을 수 없습니다.", e);
-        }
-    }
-
-    // 🔹 안정적인 기업 ID 가져오기
-    private Long getCompanyIdFromToken(String token) {
-        Long userId = getUserIdFromToken(token);
-        return userRepository.findById(userId)
-                .map(user -> user.getCompany().getId())
-                .orElseThrow(() -> new IllegalStateException("사용자의 기업 정보를 찾을 수 없습니다."));
     }
 }

@@ -1,10 +1,10 @@
-package com.jobPrize.companyService.service;
-
-import java.util.Optional;
+package com.jobPrize.companyService.service.companyInfo.impl;
 
 import org.springframework.stereotype.Service;
 
 import com.jobPrize.companyService.dto.companyInfoDto.CompanyInfoUpdateDto;
+import com.jobPrize.companyService.service.companyInfo.api.CompanySearchService;
+import com.jobPrize.companyService.service.companyInfo.api.CompanyUpdateService;
 import com.jobPrize.entity.company.Company;
 import com.jobPrize.repository.company.company.CompanyRepository;
 
@@ -13,24 +13,19 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class CompanyService {
-
+public class DefaultCompanyUpdateService implements CompanyUpdateService {
+    
     private final CompanyRepository companyRepository;
+    private final CompanySearchService companySearchService; 
 
-    // ✅ 기업 정보 조회
-    public Optional<Company> findMyCompany(Long userId) {
-        return companyRepository.findByUserId(userId);
-    }
-
-    // ✅ 기업 정보 수정
+    @Override
     public Company updateMyCompanyInfo(Long userId, CompanyInfoUpdateDto dto) {
-        Company company = findMyCompany(userId)
-                .orElseThrow(() -> new EntityNotFoundException("기업 정보를 찾을 수 없습니다.")); 
+        Company company = companySearchService.findMyCompany(userId)
+                .orElseThrow(() -> new EntityNotFoundException("기업 정보를 찾을 수 없습니다."));
 
-        // ✅ 기존 데이터를 유지하면서 빌더를 활용하여 업데이트
         return companyRepository.save(
                 Company.builder()
-                		.id(company.getId())
+                        .id(company.getId())
                         .companyName(dto.getCompanyName())
                         .representativeName(dto.getRepresentativeName())
                         .businessNumber(dto.getBusinessNumber())
@@ -42,7 +37,6 @@ public class CompanyService {
                         .companyEmail(dto.getCompanyEmail())
                         .introduction(dto.getIntroduction())
                         .build()
-                        
         );
     }
 }

@@ -1,4 +1,4 @@
-package com.jobPrize.companyService.service;
+package com.jobPrize.companyService.service.integrated;
 
 import java.util.List;
 

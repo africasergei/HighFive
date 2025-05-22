@@ -11,6 +11,5 @@ public class SubscriptionResponseDto {
 	private final Long id;
 	private final LocalDate startDate;
 	private final LocalDate endDate;
-	private final boolean isSubcribed;
-	
+	private final boolean isActive;
 }

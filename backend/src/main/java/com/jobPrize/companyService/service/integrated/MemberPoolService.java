@@ -1,4 +1,4 @@
-package com.jobPrize.companyService.service;
+package com.jobPrize.companyService.service.integrated;
 
 import java.util.List;
 
@@ -9,12 +9,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.jobPrize.companyService.dto.memberPool.MemberDetailResponseDto;
 import com.jobPrize.companyService.dto.memberPool.MemberPoolListResponseDto;
+import com.jobPrize.entity.common.User;
 import com.jobPrize.entity.company.JobPosting;
 import com.jobPrize.entity.memToCom.Interest;
 import com.jobPrize.entity.memToCom.Similarity;
 import com.jobPrize.entity.member.Education;
 import com.jobPrize.entity.member.Member;
-import com.jobPrize.jwt.TokenProvider;
 import com.jobPrize.repository.common.subscription.SubscriptionRepository;
 import com.jobPrize.repository.common.user.UserRepository;
 import com.jobPrize.repository.company.jobPosting.CompanyJobPostingRepository;
@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 public class MemberPoolService {
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
-    private final TokenProvider tokenProvider;
     private final SimilarityRepository similarityRepository;
     private final EducationRepository educationRepository;
     private final CompanyJobPostingRepository companyJobPostingRepository;
@@ -36,12 +35,7 @@ public class MemberPoolService {
 
     // ✅ 기업이 인재 검색 (리스트 조회)
     @Transactional(readOnly = true)
-    public Page<MemberPoolListResponseDto> getMemberInfo(String token, Pageable pageable) throws IllegalAccessException {
-        if (!hasAccessToMemberPool(token)) {
-            throw new IllegalAccessException("구독을 하지 않은 사용자는 접근할 수 없습니다.");
-        }
-
-        Long companyId = getCompanyIdFromToken(token);
+    public Page<MemberPoolListResponseDto> getMemberInfo(Long companyId, Pageable pageable) {
         JobPosting latestJobPosting = companyJobPostingRepository.findLatestJobPosting(companyId)
                 .orElseThrow(() -> new IllegalStateException("최근 채용공고를 찾을 수 없습니다."));
 
@@ -57,27 +51,22 @@ public class MemberPoolService {
 
     // ✅ 기업이 특정 인재 상세 조회
     @Transactional(readOnly = true)
-    public MemberDetailResponseDto getMemberDetail(String token, Long memberId) throws IllegalAccessException {
-        if (!hasAccessToMemberPool(token)) {
-            throw new IllegalAccessException("구독을 하지 않은 사용자는 접근할 수 없습니다.");
-        }
-
+    public MemberDetailResponseDto getMemberDetail(Long companyId, Long memberId) {
         Member member = findValidMemberById(memberId);
-        boolean isInterested = interestService.isMemberInterested(getCompanyIdFromToken(token), memberId); // ✅ 관심 여부 체크
+        boolean isInterested = interestService.isMemberInterested(companyId, memberId); // ✅ 관심 여부 체크
 
         return mapToDetailDto(member, isInterested);
     }
 
     // ✅ 기업이 특정 인재를 관심 등록 (토글 방식 적용)
     @Transactional
-    public void toggleInterestForMember(String token, Long memberId) {
-        interestService.toggleInterestForMember(token, memberId); // ✅ 기존 `InterestService` 활용
+    public void toggleInterestForMember(Long companyId, Long memberId) {
+        interestService.toggleInterestForMember(companyId, memberId); // ✅ 기존 `InterestService` 활용
     }
 
     // ✅ 기업이 관심 등록한 인재 조회
     @Transactional(readOnly = true)
-    public Page<MemberPoolListResponseDto> getInterestedMembers(String token, Pageable pageable) {
-        Long companyId = getCompanyIdFromToken(token);
+    public Page<MemberPoolListResponseDto> getInterestedMembers(Long companyId, Pageable pageable) {
         Page<Interest> interestedMembers = interestService.getInterestedMembers(companyId, pageable); // ✅ 관심 목록 조회
 
         return interestedMembers.map(interest -> {
@@ -85,32 +74,6 @@ public class MemberPoolService {
             List<Education> educations = educationRepository.findAllByMemberId(member.getId());
             return mapToDto(member, educations, null, true);
         });
-    }
-
-    // 🔹 인증 및 검증 로직
-    private boolean hasAccessToMemberPool(String token) {
-        Long userId = getUserIdFromToken(token);
-        return subscriptionRepository.existsByUserId(userId);
-    }
-
-    private Long getCompanyIdFromToken(String token) {
-        return userRepository.findById(getUserIdFromToken(token))
-                .map(user -> user.getCompany().getId())
-                .orElseThrow(() -> new IllegalStateException("회사 정보를 찾을 수 없습니다."));
-    }
-
-    private Long getUserIdFromToken(String token) {
-        try {
-            return tokenProvider.getIdFromToken(token); // ✅ 안정적인 방식으로 ID 가져오기
-        } catch (IllegalStateException e) {
-            throw new IllegalStateException("토큰에서 유효한 사용자 ID를 찾을 수 없습니다.", e);
-        }
-    }
-
-    private Member findValidMemberById(Long memberId) {
-        return userRepository.findById(memberId)
-                .map(user -> user.getMember())
-                .orElseThrow(() -> new IllegalStateException("해당 회원을 찾을 수 없습니다."));
     }
 
     // 🔹 DTO 변환 로직
@@ -136,5 +99,11 @@ public class MemberPoolService {
                 .phone(member.getUser().getPhone())
                 .isInterested(isInterested)
                 .build();
+    }
+
+    private Member findValidMemberById(Long memberId) {
+        return userRepository.findById(memberId)
+                .map(User::getMember)
+                .orElseThrow(() -> new IllegalStateException("해당 회원을 찾을 수 없습니다."));
     }
 }

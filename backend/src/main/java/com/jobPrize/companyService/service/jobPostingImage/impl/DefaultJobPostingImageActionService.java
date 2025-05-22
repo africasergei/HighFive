@@ -1,31 +1,22 @@
-package com.jobPrize.companyService.service;
+package com.jobPrize.companyService.service.jobPostingImage.impl;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
+import com.jobPrize.repository.company.jobPostingImage.CompanyJobPostingImageRepository;
+import com.jobPrize.companyService.service.jobPostingImage.api.JobPostingImageActionService;
 import com.jobPrize.entity.company.JobPosting;
 import com.jobPrize.entity.company.JobPostingImage;
-import com.jobPrize.repository.company.jobPostingImage.CompanyJobPostingImageRepository;
-
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
-public class JobPostingImageService {
+public class DefaultJobPostingImageActionService implements JobPostingImageActionService {
 
     private final CompanyJobPostingImageRepository companyJobPostingImageRepository;
 
-    // ✅ 이미지 URL만 반환
-    public List<String> getImageUrlsByJobPostingId(Long jobPostingId) {
-        return companyJobPostingImageRepository.findAllByJobPostingId(jobPostingId)
-                .stream()
-                .map(JobPostingImage::getImageUrl)
-                .collect(Collectors.toList());
-    }
-
+    @Override
     @Transactional
     public void updateSpecificImages(Long jobPostingId, List<String> imageUrlsToDelete, List<String> newImageUrls) {
         List<JobPostingImage> images = companyJobPostingImageRepository.findAllByJobPostingId(jobPostingId);
@@ -46,20 +37,8 @@ public class JobPostingImageService {
         companyJobPostingImageRepository.saveAll(newImages);
     }
 
+    @Override
     public void deleteSingleImage(Long imageId) {
         companyJobPostingImageRepository.deleteById(imageId);
     }
-    
-    public List<String> getImageUrlsToDelete(Long jobPostingId, List<String> newImageUrls) {
-
-    	List<String> existingImageUrls = companyJobPostingImageRepository.findAllByJobPostingId(jobPostingId)
-                .stream().map(JobPostingImage::getImageUrl)
-                .collect(Collectors.toList());
-
-        // ✅ 기존 이미지 목록에서 새로운 목록에 없는 항목을 필터링하여 삭제 리스트 생성
-        return existingImageUrls.stream()
-                .filter(url -> !newImageUrls.contains(url)) // ❌ 기존에 있었지만 새 리스트에 없는 이미지 찾기
-                .collect(Collectors.toList());
-    }
-
 }
