@@ -49,20 +49,5 @@ public class SecurityUser implements UserDetails {
 	public String getPassword() {
 		return user.getPassword();
 	}
-	
-	public Long getId() {
-	    return user.getId();
-	}
-	
-	public UserType getUserType() {
-	    String role = getAuthorities().stream()
-	        .map(GrantedAuthority::getAuthority)
-	        .findFirst()
-	        .orElse("ROLE_USER");
-
-	    return UserType.valueOf(role.replace("ROLE_", ""));
-	}
-	
-
 
 }
