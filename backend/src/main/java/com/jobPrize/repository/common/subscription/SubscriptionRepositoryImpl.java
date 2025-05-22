@@ -1,6 +1,7 @@
 package com.jobPrize.repository.common.subscription;
 
 import java.util.List;
+import java.util.Optional;
 
 import com.jobPrize.entity.common.QSubscription;
 import com.jobPrize.entity.common.QUser;
@@ -42,4 +43,17 @@ public class SubscriptionRepositoryImpl implements SubscriptionRepositoryCustom 
 		
 		return results;
 	}
+	@Override
+	public 	Optional<Subscription> findByCompanyId(Long companyId){
+		QSubscription subscription = QSubscription.subscription;
+
+	    return Optional.ofNullable(queryFactory
+	        .selectFrom(subscription)
+	        .where(subscription.company.id.eq(companyId)
+	            .and(subscription.isActive.eq(true))) // ✅ 활성화된 구독만 조회
+	        .orderBy(subscription.startDate.desc()) // ✅ 최신순 정렬
+	        .fetchFirst()); // ✅ 단건 조회
+	}
 }
+	
+

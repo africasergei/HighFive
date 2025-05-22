@@ -20,6 +20,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 @Getter
 @Entity
 @Table(name = "advertisement")
@@ -48,11 +49,18 @@ public class Advertisement {
 	@Column(name = "end_date")
 	private LocalDate endDate;
 
+	@Column(name = "is_using_ad", nullable = false) // ✅ 광고 활성 여부 필드 추가
+	private boolean isUsingAd;
+
 	public void updateImageUrl(String imageUrl) {
 		if (endDate.isBefore(LocalDate.now())) {
 			return;
 		}
-			this.imageUrl = imageUrl;
+		this.imageUrl = imageUrl;
+	}
 
+	public boolean isUsingAd() {
+		return LocalDate.now().isAfter(startDate) && LocalDate.now().isBefore(endDate);
 	}
 }
+

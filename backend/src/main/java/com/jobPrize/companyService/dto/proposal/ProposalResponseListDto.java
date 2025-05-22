@@ -2,6 +2,7 @@ package com.jobPrize.companyService.dto.proposal;
 
 import java.time.LocalDate;
 
+import com.jobPrize.entity.common.GenderType;
 import com.jobPrize.entity.memToCom.EducationLevel;
 import com.jobPrize.entity.memToCom.ProposalStatus;
 
@@ -14,8 +15,8 @@ public class ProposalResponseListDto {
 
     private final Long id;
     private final String name;
-    private final Gender gender;
-    private final int age;
+    private final GenderType genderType;
+    private final LocalDate birthDate;
     private final boolean hasCareer;
     private final String job;
     private final EducationLevel educationLevel;

@@ -16,7 +16,7 @@ public class ApplicationListResponseDto {
 	private final Long companyId;
 	private final String name;
 	private GenderType gender;
-	private LocalDate age;
+	private LocalDate birthDate;
 	private final boolean hasCareer;
 	private final String job;
 	private EducationLevel educationLevel;

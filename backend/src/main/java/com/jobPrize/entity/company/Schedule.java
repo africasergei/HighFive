@@ -36,10 +36,10 @@ public class Schedule {
 	@Column(name = "date")
 	private LocalDate date;
 
-	public void updateSchedule(String title, LocalDate date, String content) {
+	public void updateSchedule(String title, String content,LocalDate date) {
 		this.title = title;
-		this.date = date;
 		this.content = content;
+		this.date = date;
 	}
 	
 	

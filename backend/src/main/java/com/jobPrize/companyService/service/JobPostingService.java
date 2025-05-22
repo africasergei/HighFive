@@ -2,11 +2,14 @@ package com.jobPrize.companyService.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.jobPrize.companyService.dto.jobPosting.JobPostingCreateDto;
 import com.jobPrize.companyService.dto.jobPosting.JobPostingDetailResponseDto;
+import com.jobPrize.companyService.dto.jobPosting.JobPostingListResponseDto;
 import com.jobPrize.companyService.dto.jobPosting.JobPostingUpdateDto;
 import com.jobPrize.entity.common.User;
 import com.jobPrize.entity.company.Company;
@@ -25,7 +28,6 @@ public class JobPostingService {
     private final JobPostingImageService jobPostingImageService;
     private final UserRepository userRepository;
     private final TokenProvider tokenProvider;
-
     @Transactional // ✅ 채용공고 생성
     public JobPosting createJobPosting(String token, JobPostingCreateDto dto) {
         Long userId = getUserIdFromToken(token);
@@ -126,8 +128,28 @@ public class JobPostingService {
 
         return companyJobPostingRepository.save(jobPosting);
     }
+    @Transactional(readOnly = true)
+    public Page<JobPostingListResponseDto> getMyJobPostings(String token, Pageable pageable) {
+        Long companyId = getCompanyIdFromToken(token);
 
-    // 🔹 안정적인 사용자 ID 가져오기
+        Page<JobPosting> jobPostings = companyJobPostingRepository.findAllByCompanyId(companyId, pageable);
+
+        return jobPostings.map(this::convertToDto);
+    }
+
+    private JobPostingListResponseDto convertToDto(JobPosting jobPosting) {
+        return JobPostingListResponseDto.builder()
+                .id(jobPosting.getId())
+                .companyType(jobPosting.getCompanyType())
+                .title(jobPosting.getTitle())
+                .job(jobPosting.getJob())
+                .workLocation(jobPosting.getWorkLocation())
+                .careerType(jobPosting.getCareerType())
+                .educationLevel(jobPosting.getEducationLevel())
+                .createdDate(jobPosting.getCreatedDate())
+                .build();
+    }
+
     private Long getUserIdFromToken(String token) {
         try {
             return tokenProvider.getIdFromToken(token);

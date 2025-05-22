@@ -20,7 +20,6 @@ import com.jobPrize.repository.common.user.UserRepository;
 import com.jobPrize.repository.company.jobPosting.CompanyJobPostingRepository;
 import com.jobPrize.repository.memToCom.similarity.SimilarityRepository;
 import com.jobPrize.repository.member.education.EducationRepository;
-import com.jobPrize.service.InterestService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -133,7 +132,7 @@ public class MemberPoolService {
                 .name(member.getUser().getName())
                 .email(member.getUser().getEmail())
                 .gender(member.getUser().getGenderType())
-                .age(member.getUser().getBirthDate())
+                .birthDate(member.getUser().getBirthDate())
                 .phone(member.getUser().getPhone())
                 .isInterested(isInterested)
                 .build();

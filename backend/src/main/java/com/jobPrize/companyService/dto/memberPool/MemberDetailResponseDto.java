@@ -5,6 +5,9 @@ import com.jobPrize.entity.member.Education;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDate;
+
+import com.jobPrize.entity.common.GenderType;
 @Getter
 @Builder
 public class MemberDetailResponseDto {
@@ -12,7 +15,7 @@ public class MemberDetailResponseDto {
 	private final String name;
 	private final String email;
 	private GenderType gender;
-	private final int age;
+	private final LocalDate birthDate;
 	private final boolean hasCareer;
 	private final String job;
 	private final String phone;

@@ -47,7 +47,7 @@ public class Company {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "industry", nullable = false) //DB와 반대구조 업종클래스에서도 관계설정
 	private Industry industry;
-
+	
 	@Column(name = "company_name", nullable = false)
 	private String companyName;
 
@@ -62,6 +62,9 @@ public class Company {
 
 	@Column(name = "company_phone", nullable = false)
 	private String companyPhone;
+	
+	@Column(name = "company_email", nullable = false)
+	private String companyEmail;
 	
 	@Column(name = "introduction")
 	private String introduction;

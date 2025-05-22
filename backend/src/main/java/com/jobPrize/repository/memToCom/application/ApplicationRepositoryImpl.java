@@ -68,7 +68,7 @@ public class ApplicationRepositoryImpl implements ApplicationRepositoryCustom{
 			    .fetch();
 		
 		
-		return new PageImpl<Application>(results,pageable, countApplicationsByjobPostingId(id));
+		return new PageImpl<Application>(results,pageable, countApplicationsByJobPostingId(id));
 
 	}
 	
@@ -86,7 +86,7 @@ public class ApplicationRepositoryImpl implements ApplicationRepositoryCustom{
 	}
 	
 	
-	public long countApplicationsByjobPostingId(Long id) {
+	public long countApplicationsByJobPostingId(Long id) {
 		QApplication application = QApplication.application;
 
 	    return Optional.ofNullable(

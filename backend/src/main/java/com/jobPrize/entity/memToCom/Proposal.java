@@ -4,7 +4,6 @@ import java.time.LocalDate;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
 import com.jobPrize.entity.company.Company;
 import com.jobPrize.entity.member.Member;
 
@@ -24,7 +23,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-@Getter
 @Entity
 @Table(name = "proposal")
 @NoArgsConstructor

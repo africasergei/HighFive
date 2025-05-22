@@ -31,6 +31,11 @@ public class InterestService {
     public boolean isMemberInterested(Long companyId, Long memberId) {
         return interestRepository.existsByCompanyIdAndMemberId(companyId, memberId);
     }
+    
+    @Transactional(readOnly = true)
+    public boolean isApplicationInterested(Long companyId, Long applicationId) {
+        return interestRepository.existsByCompanyIdAndApplicationId(companyId, applicationId);
+    }
 
     @Transactional
     public void toggleInterestForMember(String token, Long memberId) {

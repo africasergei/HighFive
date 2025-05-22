@@ -2,11 +2,6 @@ package com.jobPrize.companyService.dto.jobPosting;
 
 import java.util.List;
 
-import org.springframework.web.multipart.MultipartFile;
-
-import com.jobPrize.companyService.dto.jobPostingImage.JobPostingImageDto;
-import com.jobPrize.companyService.dto.memberPool.MemberFilterCondition;
-import com.jobPrize.entity.company.CompanyType;
 import com.jobPrize.entity.memToCom.EducationLevel;
 
 import jakarta.validation.constraints.Max;

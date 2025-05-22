@@ -38,4 +38,10 @@ public class Subscription {
     @Column(name = "END_DATE", nullable = false)
     private LocalDate endDate;	//	구독 종료일
 
+    @Column(name = "is_active", nullable = false)
+    private boolean isActive;
+    
+    public boolean isAtive() {
+    	return LocalDate.now().isAfter(startDate) && LocalDate.now().isBefore(endDate);
+    }
 }

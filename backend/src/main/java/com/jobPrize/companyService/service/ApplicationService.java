@@ -7,11 +7,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.jobPrize.companyService.dto.application.ApplicationDetailResponseDto;
 import com.jobPrize.companyService.dto.application.ApplicationListResponseDto;
+import com.jobPrize.companyService.dto.pass.PassListResponseDto;
 import com.jobPrize.entity.memToCom.Application;
+import com.jobPrize.entity.memToCom.Pass;
 import com.jobPrize.entity.member.Education;
 import com.jobPrize.entity.member.Member;
 import com.jobPrize.repository.memToCom.application.ApplicationRepository;
+import com.jobPrize.repository.memToCom.pass.PassRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,31 +24,101 @@ import lombok.RequiredArgsConstructor;
 public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
-
-    @Transactional(readOnly = true)
+    private final InterestService interestService;
+    private final PassRepository passRepository;
+    
+    @Transactional(readOnly = true) 
     public Page<ApplicationListResponseDto> getApplicantsByJobPostingId(Long jobPostingId, Pageable pageable) {
-        // ✅ 특정 채용 공고 ID 기준으로 지원자 목록 조회
+       
         Page<Application> applicationPage = applicationRepository.findAllByJobPostingId(jobPostingId, pageable);
 
-        // ✅ DTO 변환 후 반환
         return applicationPage.map(this::convertToDto);
     }
 
+    @Transactional 
+    public void toggleInterestForApplication(String token, Long applicationId) {
+        interestService.toggleInterestForApplication(token, applicationId);
+    }
+
+    
     private ApplicationListResponseDto convertToDto(Application application) {
-        Member member = application.getMember(); 
+        Member member = application.getMember();
         List<Education> educations = member.getEducations();
+        boolean isInterested = interestService.isApplicationInterested(application.getJobPosting().getCompany().getId(), application.getId());
+
         return ApplicationListResponseDto.builder()
                 .memberId(member.getId())
-                .jobPostingId(application.getJobPosting().getId()) 
-                .companyId(application.getJobPosting().getCompany().getId()) 
-                .name(member.getUser().getName()) // ✅ 지원자 이름
-                .gender(member.getUser().getGenderType()) // ✅ 성별
-                .age(member.getUser().getBirthDate()) // ✅ 나이
-                .hasCareer(!member.getCareers().isEmpty()) // ✅ 경력 여부
+                .jobPostingId(application.getJobPosting().getId())
+                .companyId(application.getJobPosting().getCompany().getId())
+                .name(member.getUser().getName()) // 
+                .gender(member.getUser().getGenderType()) 
+                .birthDate(member.getUser().getBirthDate())
+                .hasCareer(!member.getCareers().isEmpty()) 
                 .job(application.getJobPosting().getJob())
-                .educationLevel(educations.isEmpty() ? null : educations.get(0).getEducationLevel())
-                .createdDate(application.getCreatedDate()) // ✅ 지원한 날짜
-                .isInterested(application.isInterested()) // ✅ 관심 여부
+                .educationLevel(!educations.isEmpty() ? educations.get(0).getEducationLevel() : null) // ✅ 빈 리스트 방어 코드 유지
+                .createdDate(application.getCreatedDate())
+                .isInterested(isInterested) 
                 .build();
+    }
+    @Transactional(readOnly = true)
+    public ApplicationDetailResponseDto getApplicationDetail(Long applicationId) {
+        Application application = applicationRepository.findByApplicationId(applicationId)
+                .orElseThrow(() -> new IllegalStateException("해당 지원서를 찾을 수 없습니다."));
+
+        Pass pass = passRepository.findByApplication(application); 
+
+        return ApplicationDetailResponseDto.builder()
+                .id(application.getId())
+                .name(application.getMember().getUser().getName())
+                .email(application.getMember().getUser().getEmail())
+                .birthDate(application.getMember().getUser().getBirthDate())
+                .gender(application.getMember().getUser().getGenderType())
+                .hasCareer(!application.getMember().getCareers().isEmpty())
+                .job(application.getJobPosting().getJob())
+                .phone(application.getMember().getUser().getPhone())
+                .isPassed(pass != null && pass.isPassed()) 
+                .isInterested(interestService.isApplicationInterested(application.getJobPosting().getCompany().getId(), application.getId()))
+                .resumeJson(application.getResumeJson())
+                .careerDescriptionJson(application.getCareerDescriptionJson())
+                .coverLetterJson(application.getCoverLetterJson())
+                .build();
+    }
+    @Transactional(readOnly = true)
+    public Page<PassListResponseDto> getPassedApplicants(Long companyId, Pageable pageable) {
+        Page<Pass> passedApplications = passRepository.findPassedApplicantsByCompanyId(companyId, pageable);
+
+        return passedApplications.map(pass -> {
+            Application application = pass.getApplication();
+            Member member = application.getMember();
+            List<Education> educations = member.getEducations();
+
+            return PassListResponseDto.builder()
+                .applicationId(application.getId()) 
+                .memberId(member.getId())
+                .name(member.getUser().getName())
+                .gender(member.getUser().getGenderType())
+                .birthDate(member.getUser().getBirthDate())
+                .hasCareer(!member.getCareers().isEmpty())
+                .job(application.getJobPosting().getJob()) 
+                .educationLevel(!educations.isEmpty() ? educations.get(0).getEducationLevel() : null) 
+                .passDate(pass.getCreatedDate()) // ✅ 합격 날짜 추가
+                .title(application.getJobPosting().getTitle())
+                .isPassed(true) // ✅ 합격 상태 고정
+                .build();
+        });
+    }
+    @Transactional
+    public void markAsPassed(Long applicationId) {
+        Application application = applicationRepository.findByApplicationId(applicationId)
+                .orElseThrow(() -> new IllegalStateException("지원서를 찾을 수 없습니다."));
+        
+        Pass pass = passRepository.findByApplication(application);
+        
+        if (pass == null) {
+            pass = new Pass(application); 
+        }
+
+        pass.markAsPassed(); // ✅ 합격 상태 변경
+        passRepository.save(pass); // ✅ DB에 저장
     }
 }

@@ -6,7 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.jobPrize.entity.common.GenderType;
 import com.jobPrize.companyService.dto.proposal.ProposalRequestCreateDto;
 import com.jobPrize.companyService.dto.proposal.ProposalResponseListDto;
 import com.jobPrize.entity.memToCom.Proposal;
@@ -63,8 +63,8 @@ public class ProposalService {
         return ProposalResponseListDto.builder()
                 .id(proposal.getId())
                 .name(member.getUser().getName()) 
-                .gender(member.getUser().getGenderType()) // ✅ null 처리 제거
-                .age(member.getUser().getBirthDate()) // ✅ 기본값 설정 필요 없음
+                .genderType(member.getUser().getGenderType()) 
+                .birthDate(member.getUser().getBirthDate()) // ✅ 기본값 설정 필요 없음
                 .hasCareer(!member.getCareers().isEmpty())
                 .job(proposal.getProposalJob())
                 .educationLevel(!educations.isEmpty() ? educations.get(0).getEducationLevel() : null) // ✅ 빈 리스트 예외 처리
